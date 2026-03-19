@@ -4,7 +4,9 @@ Codex Mobile Notify is an open-source Codex skill that sends a mobile push notif
 
 It is designed for long-running Codex tasks where you do not want to keep watching the app while work is in progress.
 
-![Bark notification screenshot](assets/bark-notifications.png)
+<p align="center">
+  <img src="assets/bark-notifications.png" alt="Bark notification screenshot" width="320" />
+</p>
 
 ## What it does
 
