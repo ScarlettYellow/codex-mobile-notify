@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex Mobile Notify"
+  short_description: "Send mobile pushes when Codex finishes or needs you"
+  default_prompt: "Use $codex-mobile-notify for this task, or include @@, to send a mobile push when you finish or when the task blocks on my action."
