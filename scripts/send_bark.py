@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import shlex
 import hashlib
 import json
 import os
@@ -20,6 +21,10 @@ DEFAULT_GROUP = "Codex"
 TIMEOUT_SECONDS = 15
 DEFAULT_DEDUPE_WINDOW_SECONDS = 180
 DEFAULT_STATE_DIR = "~/.codex/state/codex-mobile-notify"
+DEFAULT_CONFIG_FILES = (
+    "~/.codex/bark-mobile-notify.env",
+    "~/.codex/bark.env",
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -62,6 +67,54 @@ def optional_env(name: str) -> str | None:
     return value or None
 
 
+def load_env_file(path: Path) -> dict[str, str]:
+    values: dict[str, str] = {}
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except OSError:
+        return values
+
+    for line in raw.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        try:
+            tokens = shlex.split(stripped, posix=True)
+        except ValueError:
+            continue
+        if not tokens:
+            continue
+        assignment = tokens[0]
+        if assignment == "export" and len(tokens) >= 2:
+            assignment = tokens[1]
+        if "=" not in assignment:
+            continue
+        key, value = assignment.split("=", 1)
+        key = key.strip()
+        if not key or not key.startswith("BARK_"):
+            continue
+        values[key] = value
+    return values
+
+
+def load_config_env() -> dict[str, str]:
+    configured = optional_env("BARK_CONFIG_FILE")
+    candidates = [Path(configured).expanduser()] if configured else []
+    candidates.extend(Path(path).expanduser() for path in DEFAULT_CONFIG_FILES)
+
+    for candidate in candidates:
+        if candidate.exists():
+            return load_env_file(candidate)
+    return {}
+
+
+def config_value(name: str) -> str | None:
+    value = optional_env(name)
+    if value:
+        return value
+    return load_config_env().get(name)
+
+
 def normalize_text(value: str) -> str:
     normalized = value.replace("\r\n", "\n").replace("\r", "\n").strip()
     if not normalized:
@@ -70,7 +123,7 @@ def normalize_text(value: str) -> str:
 
 
 def get_state_dir() -> Path:
-    configured = optional_env("BARK_STATE_DIR") or DEFAULT_STATE_DIR
+    configured = config_value("BARK_STATE_DIR") or DEFAULT_STATE_DIR
     return Path(configured).expanduser()
 
 
@@ -148,8 +201,14 @@ def record_notification(args: argparse.Namespace) -> None:
 
 
 def build_request_payload(args: argparse.Namespace) -> tuple[str, dict[str, object]]:
-    device_key = require_env("BARK_DEVICE_KEY")
-    base_url = optional_env("BARK_BASE_URL") or DEFAULT_BASE_URL
+    device_key = config_value("BARK_DEVICE_KEY")
+    if not device_key:
+        raise ValueError(
+            "Missing required environment variable or config entry: BARK_DEVICE_KEY. "
+            "Set BARK_DEVICE_KEY in your shell or in ~/.codex/bark-mobile-notify.env."
+        )
+
+    base_url = config_value("BARK_BASE_URL") or DEFAULT_BASE_URL
     base_url = base_url.rstrip("/")
     if not base_url:
         raise ValueError("BARK_BASE_URL must not be empty when provided.")
@@ -158,12 +217,12 @@ def build_request_payload(args: argparse.Namespace) -> tuple[str, dict[str, obje
         "device_key": device_key,
         "title": normalize_text(args.title),
         "body": normalize_text(args.body),
-        "group": optional_env("BARK_GROUP") or DEFAULT_GROUP,
+        "group": config_value("BARK_GROUP") or DEFAULT_GROUP,
     }
 
-    sound = optional_env("BARK_SOUND")
-    icon = optional_env("BARK_ICON")
-    url = optional_env("BARK_URL")
+    sound = config_value("BARK_SOUND")
+    icon = config_value("BARK_ICON")
+    url = config_value("BARK_URL")
 
     if sound:
         payload["sound"] = sound

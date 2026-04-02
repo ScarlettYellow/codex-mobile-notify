@@ -38,6 +38,8 @@ export BARK_ICON="https://example.com/icon.png"
 export BARK_URL="codex://"
 ```
 
+If Codex runs from the Dock and does not inherit your shell environment, place the same values in `~/.codex/bark-mobile-notify.env` and point to it with `BARK_CONFIG_FILE` if needed.
+
 ## When to notify
 
 Send exactly one Bark push for the current turn:

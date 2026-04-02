@@ -74,6 +74,17 @@ export BARK_URL="codex://"
 export BARK_STATE_DIR="$HOME/.codex/state/codex-mobile-notify"
 ```
 
+If Codex is launched from the Dock and does not inherit your shell environment, put the same values in `~/.codex/bark-mobile-notify.env` instead:
+
+```bash
+export BARK_DEVICE_KEY="your-device-key"
+export BARK_BASE_URL="https://api.day.app"
+export BARK_GROUP="Codex"
+export BARK_SOUND="minuet"
+```
+
+You can also point the script at a different file with `BARK_CONFIG_FILE`.
+
 ## Manual script usage
 
 Completion:
